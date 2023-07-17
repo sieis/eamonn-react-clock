@@ -5,7 +5,8 @@ class App extends React.Component{
             break:5,
             session: 25,
             length:1500,
-            running: false
+            running: false,
+            timerLabel: 'Session'
         }
         this.handleReset=this.handleReset.bind(this)
         this.handleBreakDecrement=this.handleBreakDecrement.bind(this)
@@ -15,7 +16,10 @@ class App extends React.Component{
         this.handleTimer=this.handleTimer.bind(this)
         this.countDown=this.countDown.bind(this)
     }
+
+    // from chatGPT...fixed to clearInterval as well
     handleReset(){
+        clearInterval(this.timerInterval);
         this.setState({
             running: false,
             break:5,
@@ -53,26 +57,61 @@ class App extends React.Component{
             })
         }
     }
-    // Now need to fix it so I can start and stop timer instead of just starting it
-    countDown(){
-        if(this.state.running === true){
-            let seconds = this.state.length - 1;
-            this.setState({
-                length: seconds
-            })
-            if(this.state.length == 0){
-                clearInterval(this.handleTimer)
+    //   this from Chat GPT to handle the switch between break and session
+    countDown() {
+        if (this.state.running === true) {
+          let seconds = this.state.length - 1;
+          if (seconds < 0) {
+            seconds = 0;
+            if (this.state.break === 0) {
+              // If break length is zero, reset the session to its initial length
+              this.setState((prevState) => ({
+                length: prevState.session * 60
+              }));
+            } else {
+              // Switch to break and set the break length
+              this.setState((prevState) => ({
+                length: prevState.break * 60
+              }));
             }
-        }else{
-            clearInterval(this.handleTimer)
+          } else {
+            this.setState({
+              length: seconds
+            });
+          }
+      
+          if (seconds === 0) {
+            clearInterval(this.timerInterval);
+            const alarmSound = new Audio('/alarm.wav'); // Replace with the path to your alarm sound file
+            alarmSound.id='beep';
+            alarmSound.play();
+            if(this.state.timerLabel === 'Session'){
+                this.setState({
+                    timerLabel: 'Break'
+                });
+            } else{
+                this.setState({
+                    timerLabel: 'Session'
+                });
+            }
+            this.timerInterval = setInterval(this.countDown, 1000); // Start the interval for the next session or break
+          }
+        } else {
+          clearInterval(this.timerInterval);
         }
-    }
-    handleTimer(){
-        this.setState({
-            running: !this.state.running
-        })
-        return this.handleTimer = setInterval(this.countDown,1000)
-    }
+      }
+      
+    handleTimer() {
+        if (this.state.running) {
+          clearInterval(this.timerInterval); // Clear the interval when the timer is already running
+        } else {
+          this.timerInterval = setInterval(this.countDown, 1000); // Start the interval for countdown
+        }
+        this.setState((prevState) => ({
+          running: !prevState.running
+        }));
+      }
+      
     
     render(){
         return(
@@ -81,7 +120,7 @@ class App extends React.Component{
                 <div id="break-length">{this.state.break}</div>
                 <div id="session-label">Session Length</div>
                 <div id="session-length">{this.state.session}</div>
-                <div id="timer-label">Session</div>
+                <div id="timer-label">{this.state.timerLabel}</div>
                 <div id="time-left">{Math.floor(this.state.length/60)}:{String(Math.floor(this.state.length%60)).padStart(2,'0')}</div>
                 <button id="break-decrement" onClick={this.handleBreakDecrement}>⬇️</button>
                 <button id="break-increment" onClick={this.handleBreakIncrement}>⬆️</button>
@@ -89,6 +128,8 @@ class App extends React.Component{
                 <button id="session-increment" onClick={this.handleSessionIncrement}>⬆️</button>
                 <button id="start_stop" onClick={()=>this.handleTimer()}>⏯️</button>
                 <button id="reset" onClick={this.handleReset}>🔄</button>
+                <audio id="beep" src="/alarm.wav"></audio>
+                
             </>
         )
     }
