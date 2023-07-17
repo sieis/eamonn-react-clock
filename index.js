@@ -17,6 +17,7 @@ class App extends React.Component{
     }
     handleReset(){
         this.setState({
+            running: false,
             break:5,
             session: 25,
             length:1500
